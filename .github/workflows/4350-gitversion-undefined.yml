@@ -24,7 +24,7 @@ jobs:
 
       - name: Install GitVersion.Tool
         run: |
-          dotnet tool install --global GitVersion.Tool --version 6.0.x
+          dotnet tool install --global GitVersion.Tool --version 6.0.5
 
       - name: Show GitVersion config
         run: dotnet gitversion -config GitVersion.yml -showconfig
@@ -59,8 +59,7 @@ jobs:
       - name: Setup GitVersion
         uses: gittools/actions/gitversion/setup@v3.1.1
         with:
-          versionSpec: '6.0.x'
-          preferLatestVersion: true
+          versionSpec: '6.0.5'
 
       - name: Execute GitVersion
         id: gitversion
@@ -74,13 +73,13 @@ jobs:
           # Convert GitVersion outputs to JSON
           {
             echo '{'
-            env | grep "GITVERSION_" | sort | while IFS='=' read -r key value; do
-              clean_key="${key#GITVERSION_}"
+            env | grep "^GitVersion_" | sort | while IFS='=' read -r key value; do
+              clean_key="${key#GitVersion_}"
               # Add comma for all except last line
-              if [ "$(env | grep -c "GITVERSION_")" -eq 1 ]; then
-                echo "\"$clean_key\": \"$value\""
-              else
+              if [ "$(env | grep -c "^GitVersion_")" -gt 1 ] && [ ! -z "$(env | grep "^GitVersion_" | tail -n +2 | grep "^$key\$")" ]; then
                 echo "\"$clean_key\": \"$value\","
+              else
+                echo "\"$clean_key\": \"$value\""
               fi
             done
             echo '}'
