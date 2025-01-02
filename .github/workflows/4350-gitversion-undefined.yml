@@ -11,10 +11,17 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+
       - name: Checkout source
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "9.x"
+          dotnet-quality: "ga"
 
       - name: Install dependencies
         run: |
@@ -50,5 +57,24 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "9.x"
+          dotnet-quality: "ga"
+
       - name: Setup GitVersion
+        id: gitversion
         uses: gittools/actions/gitversion/execute@v3.1.1
+
+      - name: Summary output
+        if: always()
+        run: |
+          {
+            echo "| Variable         | Output                                           |"
+            echo "| :--------------- | :----------------------------------------------- |"
+            echo "| Base version     | ${{ steps.gitversion.outputs.MajorMinorPatch }}  |"
+            echo "| PreReleaseTag    | ${{ steps.gitversion.outputs.PreReleaseTag }}    |"
+            echo "| PreReleaseNumber | ${{ steps.gitversion.outputs.PreReleaseNumber }} |"
+            echo "| SemVer           | ${{ steps.gitversion.outputs.SemVer }}           |"
+          } >> $GITHUB_STEP_SUMMARY
