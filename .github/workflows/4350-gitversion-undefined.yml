@@ -24,7 +24,7 @@ jobs:
 
       - name: Install GitVersion.Tool
         run: |
-          dotnet tool install --global GitVersion.Tool --version 6.0.5
+          dotnet tool install --global GitVersion.Tool --version 6.0.x
 
       - name: Show GitVersion config
         run: dotnet gitversion -config GitVersion.yml -showconfig
@@ -59,7 +59,7 @@ jobs:
       - name: Setup GitVersion
         uses: gittools/actions/gitversion/setup@v3.1.1
         with:
-          versionSpec: '6.0.5'
+          versionSpec: '6.0.x'
 
       - name: Execute GitVersion
         id: gitversion
