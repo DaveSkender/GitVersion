@@ -6,7 +6,7 @@ on:
       - example-undefined
 
 jobs:
-  dotnet-gitversion:
+  gitversion-tool:
     runs-on: ubuntu-latest
 
     steps:
@@ -40,7 +40,7 @@ jobs:
             echo "$OUTPUT" | jq -r 'to_entries | sort_by(.key) | .[] | "| \(.key) | \(.value) |"'
           } >> $GITHUB_STEP_SUMMARY
 
-  gittools-action:
+  actions-gitversion:
     runs-on: ubuntu-latest
 
     steps:
@@ -70,23 +70,26 @@ jobs:
 
       - name: Generate summary
         run: |
-          # Convert GitVersion outputs to JSON
+          # Create JSON from GitVersion environment variables
           {
-            echo '{'
-            env | grep "^GitVersion_" | sort | while IFS='=' read -r key value; do
-              clean_key="${key#GitVersion_}"
-              # Add comma for all except last line
-              if [ "$(env | grep -c "^GitVersion_")" -gt 1 ] && [ ! -z "$(env | grep "^GitVersion_" | tail -n +2 | grep "^$key\$")" ]; then
-                echo "\"$clean_key\": \"$value\","
+            echo "{"
+            first=true
+            for var in $(env | grep "^GitVersion_" | sort); do
+              key=$(echo "$var" | cut -d= -f1 | sed 's/^GitVersion_//')
+              value=$(echo "$var" | cut -d= -f2-)
+              if [ "$first" = true ]; then
+                first=false
               else
-                echo "\"$clean_key\": \"$value\""
+                echo ","
               fi
+              echo "  \"$key\": \"$value\""
             done
-            echo '}'
+            echo "}"
           } > gitversion.json
 
+          # Generate summary table
           {
             echo "| Variable | Output |"
             echo "| :--- | :--- |"
-            cat gitversion.json | jq -r 'to_entries | sort_by(.key) | .[] | "| \(.key) | \(.value) |"'
+            jq -r 'to_entries | sort_by(.key) | .[] | "| \(.key) | \(.value) |"' gitversion.json
           } >> $GITHUB_STEP_SUMMARY
