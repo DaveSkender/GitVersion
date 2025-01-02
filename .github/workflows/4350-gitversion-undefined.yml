@@ -60,6 +60,7 @@ jobs:
         uses: gittools/actions/gitversion/setup@v3.1.1
         with:
           versionSpec: '6.0.x'
+          preferLatestVersion: true
 
       - name: Execute GitVersion
         id: gitversion
