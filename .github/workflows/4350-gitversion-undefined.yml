@@ -7,7 +7,6 @@ on:
 
 jobs:
   dotnet-gitversion:
-    name: dotnet-gitversion
     runs-on: ubuntu-latest
 
     steps:
@@ -23,28 +22,22 @@ jobs:
           dotnet-version: "9.x"
           dotnet-quality: "ga"
 
-      - name: Install dependencies
+      - name: Install GitVersion.Tool
         run: |
-          sudo apt-get update && sudo apt-get install -y libxml2-utils
           dotnet tool install --global GitVersion.Tool --version 6.0.5
 
       - name: Show GitVersion config
         run: dotnet gitversion -config GitVersion.yml -showconfig
 
-      - name: Show GitVersion output
-        id: gitversion
-        run: dotnet-gitversion -config GitVersion.yml
-
-      - name: Summary output
-        if: always()
+      - name: Execute GitVersion and generate summary
         run: |
+          OUTPUT=$(dotnet-gitversion -config GitVersion.yml -output json)
+          echo "$OUTPUT"
+
           {
-            echo "| Variable         | Output                                           |"
-            echo "| :--------------- | :----------------------------------------------- |"
-            echo "| Base version     | ${{ steps.gitversion.outputs.MajorMinorPatch }}  |"
-            echo "| PreReleaseTag    | ${{ steps.gitversion.outputs.PreReleaseTag }}    |"
-            echo "| PreReleaseNumber | ${{ steps.gitversion.outputs.PreReleaseNumber }} |"
-            echo "| SemVer           | ${{ steps.gitversion.outputs.SemVer }}           |"
+            echo "| Variable | Output |"
+            echo "| :--- | :--- |"
+            echo "$OUTPUT" | jq -r 'to_entries | sort_by(.key) | .[] | "| \(.key) | \(.value) |"'
           } >> $GITHUB_STEP_SUMMARY
 
   gittools-action:
@@ -63,18 +56,28 @@ jobs:
           dotnet-version: "9.x"
           dotnet-quality: "ga"
 
-      - name: Setup GitVersion
+      - name: Setkup GitVersion
+        uses: gittools/actions/gitversion/setup@v3.1.1
+        with:
+          versionSpec: '6.0.5'
+
+      - name: Execute GitVersion
         id: gitversion
         uses: gittools/actions/gitversion/execute@v3.1.1
 
-      - name: Summary output
-        if: always()
+      - name: Generate summary
         run: |
+          # Convert GitVersion outputs to JSON
+          echo '{' > gitversion.json
+          for key in $(env | grep "GITVERSION_" | cut -d= -f1); do
+            value="${!key}"
+            clean_key="${key#GITVERSION_}"
+            echo "\"$clean_key\": \"$value\"," >> gitversion.json
+          done
+          echo '}' >> gitversion.json
+
           {
-            echo "| Variable         | Output                                           |"
-            echo "| :--------------- | :----------------------------------------------- |"
-            echo "| Base version     | ${{ steps.gitversion.outputs.MajorMinorPatch }}  |"
-            echo "| PreReleaseTag    | ${{ steps.gitversion.outputs.PreReleaseTag }}    |"
-            echo "| PreReleaseNumber | ${{ steps.gitversion.outputs.PreReleaseNumber }} |"
-            echo "| SemVer           | ${{ steps.gitversion.outputs.SemVer }}           |"
+            echo "| Variable | Output |"
+            echo "| :--- | :--- |"
+            cat gitversion.json | jq -r 'to_entries | sort_by(.key) | .[] | "| \(.key) | \(.value) |"'
           } >> $GITHUB_STEP_SUMMARY
