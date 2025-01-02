@@ -56,7 +56,7 @@ jobs:
           dotnet-version: "9.x"
           dotnet-quality: "ga"
 
-      - name: Setkup GitVersion
+      - name: Setup GitVersion
         uses: gittools/actions/gitversion/setup@v3.1.1
         with:
           versionSpec: '6.0.5'
@@ -64,17 +64,26 @@ jobs:
       - name: Execute GitVersion
         id: gitversion
         uses: gittools/actions/gitversion/execute@v3.1.1
+        with:
+          useConfigFile: true
+          configFilePath: GitVersion.yml
 
       - name: Generate summary
         run: |
           # Convert GitVersion outputs to JSON
-          echo '{' > gitversion.json
-          for key in $(env | grep "GITVERSION_" | cut -d= -f1); do
-            value="${!key}"
-            clean_key="${key#GITVERSION_}"
-            echo "\"$clean_key\": \"$value\"," >> gitversion.json
-          done
-          echo '}' >> gitversion.json
+          {
+            echo '{'
+            env | grep "GITVERSION_" | sort | while IFS='=' read -r key value; do
+              clean_key="${key#GITVERSION_}"
+              # Add comma for all except last line
+              if [ "$(env | grep -c "GITVERSION_")" -eq 1 ]; then
+                echo "\"$clean_key\": \"$value\""
+              else
+                echo "\"$clean_key\": \"$value\","
+              fi
+            done
+            echo '}'
+          } > gitversion.json
 
           {
             echo "| Variable | Output |"
