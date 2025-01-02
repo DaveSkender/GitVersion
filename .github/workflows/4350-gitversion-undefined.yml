@@ -22,11 +22,11 @@ jobs:
           dotnet tool install --global GitVersion.Tool --version 6.0.5
 
       - name: Show GitVersion config
-        run: dotnet gitversion -config src/gitversion.yml -showconfig
+        run: dotnet gitversion -config GitVersion.yml -showconfig
 
       - name: Show GitVersion output
         id: gitversion
-        run: dotnet-gitversion -config src/gitversion.yml
+        run: dotnet-gitversion -config GitVersion.yml
 
       - name: Summary output
         if: always()
