@@ -1,0 +1,54 @@
+name: Issue 4350 repro
+
+on:
+  push:
+    branches:
+      - example-undefined
+
+jobs:
+  dotnet-gitversion:
+    name: dotnet-gitversion
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update && sudo apt-get install -y libxml2-utils
+          dotnet tool install --global GitVersion.Tool --version 6.0.5
+
+      - name: Show GitVersion config
+        run: dotnet gitversion -config src/gitversion.yml -showconfig
+
+      - name: Show GitVersion output
+        id: gitversion
+        run: dotnet-gitversion -config src/gitversion.yml
+
+      - name: Summary output
+        if: always()
+        run: |
+          {
+            echo "| Variable         | Output                                           |"
+            echo "| :--------------- | :----------------------------------------------- |"
+            echo "| Base version     | ${{ steps.gitversion.outputs.MajorMinorPatch }}  |"
+            echo "| PreReleaseTag    | ${{ steps.gitversion.outputs.PreReleaseTag }}    |"
+            echo "| PreReleaseNumber | ${{ steps.gitversion.outputs.PreReleaseNumber }} |"
+            echo "| SemVer           | ${{ steps.gitversion.outputs.SemVer }}           |"
+          } >> $GITHUB_STEP_SUMMARY
+
+  gittools-action:
+    runs-on: ubuntu-latest
+
+    steps:
+
+      - name: Checkout source
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup GitVersion
+        uses: gittools/actions/gitversion/execute@v3.1.1
