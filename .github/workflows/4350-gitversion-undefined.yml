@@ -1,0 +1,95 @@
+name: Issue 4350 repro
+
+on:
+  push:
+    branches:
+      - example-undefined
+
+jobs:
+  gitversion-tool:
+    runs-on: ubuntu-latest
+
+    steps:
+
+      - name: Checkout source
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "9.x"
+          dotnet-quality: "ga"
+
+      - name: Install GitVersion.Tool
+        run: |
+          dotnet tool install --global GitVersion.Tool --version 6.0.5
+
+      - name: Show GitVersion config
+        run: dotnet gitversion -config GitVersion.yml -showconfig
+
+      - name: Execute GitVersion and generate summary
+        run: |
+          OUTPUT=$(dotnet-gitversion -config GitVersion.yml -output json)
+          echo "$OUTPUT"
+
+          {
+            echo "| Variable | Output |"
+            echo "| :--- | :--- |"
+            echo "$OUTPUT" | jq -r 'to_entries | sort_by(.key) | .[] | "| \(.key) | \(.value) |"'
+          } >> $GITHUB_STEP_SUMMARY
+
+  actions-gitversion:
+    runs-on: ubuntu-latest
+
+    steps:
+
+      - name: Checkout source
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "9.x"
+          dotnet-quality: "ga"
+
+      - name: Setup GitVersion
+        uses: gittools/actions/gitversion/setup@v3.1.1
+        with:
+          versionSpec: '6.0.5'
+
+      - name: Execute GitVersion
+        id: gitversion
+        uses: gittools/actions/gitversion/execute@v3.1.1
+        with:
+          useConfigFile: true
+          configFilePath: GitVersion.yml
+
+      - name: Generate summary
+        run: |
+          # Create JSON from GitVersion environment variables
+          {
+            echo "{"
+            first=true
+            for var in $(env | grep "^GitVersion_" | sort); do
+              key=$(echo "$var" | cut -d= -f1 | sed 's/^GitVersion_//')
+              value=$(echo "$var" | cut -d= -f2-)
+              if [ "$first" = true ]; then
+                first=false
+              else
+                echo ","
+              fi
+              echo "  \"$key\": \"$value\""
+            done
+            echo "}"
+          } > gitversion.json
+
+          # Generate summary table
+          {
+            echo "| Variable | Output |"
+            echo "| :--- | :--- |"
+            jq -r 'to_entries | sort_by(.key) | .[] | "| \(.key) | \(.value) |"' gitversion.json
+          } >> $GITHUB_STEP_SUMMARY
